@@ -1,0 +1,21 @@
+<?php
+if(!function_exists('oog_autoloader')) {
+
+    function oog_autoloader($classname) {
+        if(strpos($classname, 'oog\\') === 0) {
+            $packages = explode('\\', $classname);
+
+            $path = WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'oog' . $packages[1] . DIRECTORY_SEPARATOR . join(DIRECTORY_SEPARATOR, $packages) . '.php';
+            if(file_exists($path)) {
+                include_once $path;
+                return true;
+            }
+        }
+        return false;
+    }
+    spl_autoload_register('oog_autoloader');
+}
+
+define('OOG_UITZENDINGEN_PLUGIN_FILE', __FILE__);
+define('OOG_UITZENDINGEN_PLUGIN_DIR', __DIR__);
+require __DIR__ . '/vendor/autoload.php';

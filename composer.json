@@ -1,0 +1,19 @@
+{
+  "name": "oogtv/uitzendingen",
+  "description": "OogTV Uitzendingen plugin for Wordpress",
+  "type": "wordpress-plugin",
+  "license": "GPL",
+  "authors": [
+    {
+      "name": "Ids Klijnsma",
+      "email": "werk@idsklijnsma.nl"
+    }
+  ],
+  "extra": {
+    "installer-name": "ooguitzendingen"
+  },
+  "require": {
+    "composer/installers": "~1.0",
+    "google/apiclient": "^2.1"
+  }
+}
