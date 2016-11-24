@@ -18,4 +18,10 @@ if(!function_exists('oog_autoloader')) {
 
 define('OOG_UITZENDINGEN_PLUGIN_FILE', __FILE__);
 define('OOG_UITZENDINGEN_PLUGIN_DIR', __DIR__);
-require __DIR__ . '/vendor/autoload.php';
+
+if(file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require __DIR__ . '/vendor/autoload.php';
+} else if(defined('ABSPATH') && file_exists(ABSPATH . '/vendor/autoload.php')) {
+    require ABSPATH . '/vendor/autoload.php';
+
+}
