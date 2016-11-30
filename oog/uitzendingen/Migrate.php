@@ -69,7 +69,10 @@ class Migrate
                 if($type === Uitzending::POST_TYPE_TV) {
                     update_field('youtube_video', $item['youtube'], $post_id);
                 } else {
-                    update_field('broadcast', $item['maintext'], $post_id);
+
+                    $file = $item['maintext'] ? $item['maintext'] : $item['rawurl'];
+
+                    update_field('filename', $file, $post_id);
                 }
             }
 

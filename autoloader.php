@@ -16,7 +16,7 @@ if(!function_exists('oog_autoloader')) {
     spl_autoload_register('oog_autoloader');
 }
 
-define('OOG_UITZENDINGEN_PLUGIN_FILE', __FILE__);
+define('OOG_UITZENDINGEN_PLUGIN_FILE', __DIR__ . '/index.php');
 define('OOG_UITZENDINGEN_PLUGIN_DIR', __DIR__);
 
 if(file_exists(__DIR__ . '/vendor/autoload.php')) {

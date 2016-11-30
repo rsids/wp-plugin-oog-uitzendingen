@@ -66,7 +66,6 @@ class Youtube
             // video not found
         } else {
             $video = $listResponse[0];
-            error_log(var_export($video,true));
             $snippet = $video['snippet'];
             $status = $video['status'];
             $status['privacyStatus'] = 'public';
