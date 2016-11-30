@@ -1,2 +1,5 @@
 .idea
 vendor
+queue
+*.mp4
+*.json
