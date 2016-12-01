@@ -14,14 +14,6 @@ class Filters
         add_filter('oog-uitzending-has-radio', [$this, 'hasRadio']);
         add_filter('oog-uitzending-get-youtube-player', [$this, 'getYoutubePlayer']);
         add_filter('oog-uitzending-get-categories', [$this, 'getCategories']);
-        add_filter('oog-uitzending-filter-uitzendingen', [$this, 'filterUitzendingen']);
-    }
-
-    public function filterUitzendingen()
-    {
-        $archive = new Archive();
-        $queryVars = $archive->filterArchive();
-        return $queryVars;
     }
 
     /**
