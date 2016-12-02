@@ -16,7 +16,6 @@ class Admin
     {
         if (!defined('OOG_UITZENDINGEN_CLI_MODE')) {
             add_action('admin_menu', [$this, 'addMenu']);
-            add_action('admin_post_' . Uitzending::ACTION_CONNECT, [$this, 'connectGoogle'], 10, 0);
             add_action('admin_post_' . Uitzending::ACTION_STORE_CODE, [$this, 'storeGoogleCode'], 10);
             add_action('admin_post_' . Uitzending::ACTION_DISCONNECT, [$this, 'disconnectGoogle'], 10);
             add_action('admin_post_' . Uitzending::ACTION_GET_CATEGORIES, [$this, 'getCategories'], 10);
@@ -94,11 +93,11 @@ OOG;
     {
         $client = Admin::GetGoogleClient(false);
 
-        $client->setRedirectUri('http://www.oog-uitzendingen.nl.dev');
+        $client->setRedirectUri(get_home_url());
         $token = $client->fetchAccessTokenWithAuthCode($_POST['code']);
 
         if (array_key_exists('access_token', $token)) {
-            update_option('oog-uitzending-access_token', $token['access_token']);
+            update_option('oog-uitzending-access_token', json_encode($token));
             update_option('oog-uitzending-id_token', $token['id_token']);
             update_option('oog-uitzending-refresh_token', $token['refresh_token']);
         }
@@ -165,7 +164,7 @@ OOG;
 
                 $token = $client->fetchAccessTokenWithRefreshToken(get_option('oog-uitzending-refresh_token'));
                 if (array_key_exists('access_token', $token)) {
-                    update_option('oog-uitzending-access_token', $token['access_token']);
+                    update_option('oog-uitzending-access_token', json_encode($token));
                     update_option('oog-uitzending-id_token', $token['id_token']);
                 }
             }

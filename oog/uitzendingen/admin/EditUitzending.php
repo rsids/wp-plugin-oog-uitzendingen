@@ -102,7 +102,7 @@ class EditUitzending
                 $tags = get_the_tags($post_id);
                 $meta = get_fields($post_id);
                 $meta['title'] = get_the_title($post_id);
-                $meta['description'] = strip_tags($this->br2nl($meta['description']));
+                $meta['description'] = get_the_content();
                 if ($tags && !is_wp_error($tags)) {
                     $meta['tags'] = array_map(
                         function ($tag) {
