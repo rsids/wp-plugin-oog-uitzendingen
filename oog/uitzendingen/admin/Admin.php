@@ -20,12 +20,9 @@ class Admin
             add_action('admin_post_' . Uitzending::ACTION_STORE_CODE, [$this, 'storeGoogleCode'], 10);
             add_action('admin_post_' . Uitzending::ACTION_DISCONNECT, [$this, 'disconnectGoogle'], 10);
             add_action('admin_post_' . Uitzending::ACTION_GET_CATEGORIES, [$this, 'getCategories'], 10);
-        }
-
-        if (array_key_exists('uitzendingNotice', $_GET)) {
             add_action('admin_notices', [$this, 'adminNotices']);
-
         }
+
         $this->edit = new EditUitzending();
     }
 
@@ -50,24 +47,34 @@ class Admin
 
     public function adminNotices()
     {
-        $msg = '';
-        $type = 'info';
-        switch ($_GET['uitzendingNotice']) {
-            case Uitzending::NOTICE_CATEGORY_OK:
-                $msg = 'Categorieën geladen';
-                $type = 'success';
-                break;
-            case Uitzending::NOTICE_CATEGORY_ERR:
-                $msg = 'Categorieën geladen mislukt';
-                $type = 'error';
-        }
 
-        if ($msg) {
-            echo <<<OOG
+        if (array_key_exists('uitzendingNotice', $_GET)) {
+
+            $msg = '';
+            $type = 'info';
+            switch ($_GET['uitzendingNotice']) {
+                case Uitzending::NOTICE_CATEGORY_OK:
+                    $msg = 'Categorieën geladen';
+                    $type = 'success';
+                    break;
+                case Uitzending::NOTICE_CATEGORY_ERR:
+                    $msg = 'Categorieën geladen mislukt';
+                    $type = 'error';
+                    break;
+                case Uitzending::NOTICE_YOUTUBE_FAIL;
+                    $msg = 'Youtube bijwerken geladen mislukt';
+                    $type = 'error';
+                    break;
+
+            }
+
+            if ($msg) {
+                echo <<<OOG
 <div class="notice notice-{$type} is-dismissible">
       <p>{$msg}</p>
 </div>
 OOG;
+            }
         }
     }
 
@@ -134,7 +141,7 @@ OOG;
     {
         $origins = get_option('oog-uitzendingen-origins', '');
         $origins = explode("\n", $origins);
-        array_walk($origins, function(&$item) {
+        array_walk($origins, function (&$item) {
             $item = filter_var($item, FILTER_VALIDATE_URL);
         });
 

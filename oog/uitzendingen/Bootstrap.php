@@ -8,7 +8,6 @@
 
 namespace oog\uitzendingen;
 
-
 use oog\uitzendingen\admin\Admin;
 
 class Bootstrap
@@ -27,12 +26,16 @@ class Bootstrap
         $this->setupACF();
 
         $this->filters = new Filters();
+        $this->filters->init();
         $this->archive = new Archive();
 
         register_activation_hook(OOG_UITZENDINGEN_PLUGIN_FILE, [$this, 'activation']);
         register_deactivation_hook(OOG_UITZENDINGEN_PLUGIN_FILE, [$this, 'deactivation']);
         add_action('init', [$this, 'registerPostsAndTaxonomies']);
         add_action('admin_init', [$this->admin, 'init']);
+        add_action('widgets_init', function(){
+            register_widget( '\\oog\\uitzendingen\\widgets\\LatestEpisodeWidget' );
+        });
 
     }
 

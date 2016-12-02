@@ -31,6 +31,7 @@ class Uitzending
 
     const NOTICE_CATEGORY_OK = 1;
     const NOTICE_CATEGORY_ERR = 2;
+    const NOTICE_YOUTUBE_FAIL = 3;
 
     static function GetDefaultProgrammes()
     {

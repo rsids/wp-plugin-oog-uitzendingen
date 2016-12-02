@@ -13,7 +13,8 @@ class Youtube
      * Fetches the available Youtube Categories
      * @return array
      */
-    public function getCategories() {
+    public function getCategories()
+    {
         $client = Admin::GetGoogleClient();
         $youtube = new \Google_Service_YouTube($client);
 
@@ -27,8 +28,8 @@ class Youtube
                     'regionCode' => 'NL'
                 ]);
 
-            foreach($videoCategories['items'] as $category) {
-                if($category['snippet']['assignable']) {
+            foreach ($videoCategories['items'] as $category) {
+                if ($category['snippet']['assignable']) {
                     $cleaned[] = [
                         'id' => $category['id'],
                         'title' => $category['snippet']['title']
@@ -36,7 +37,7 @@ class Youtube
 
                 }
             }
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             error_log('Cannot get categories');
         }
 
@@ -58,24 +59,35 @@ class Youtube
                 'privacyStatus' => 'public'
             ]
         ];
-        $client = Admin::GetGoogleClient();
-        $youtube = new \Google_Service_YouTube($client);
 
-        $listResponse = $youtube->videos->listVideos('snippet,status',['id' => $id]);
-        if(empty($listResponse)) {
-            // video not found
-        } else {
-            $video = $listResponse[0];
-            $snippet = $video['snippet'];
-            $status = $video['status'];
-            $status['privacyStatus'] = 'public';
-            $snippet['categoryId'] = $meta['youtube_category'];
-            $snippet['description'] = $meta['description'];
-            $snippet['title'] = $meta['title'];
-            $snippet['tags'] = $meta['tags'];
+        try {
+            $client = Admin::GetGoogleClient();
+            $youtube = new \Google_Service_YouTube($client);
 
-            $youtube->videos->update('snippet,status', $video);
+            $listResponse = $youtube->videos->listVideos('snippet,status', ['id' => $id]);
+            if (empty($listResponse)) {
+                // video not found
+            } else {
+                $video = $listResponse[0];
+                $snippet = $video['snippet'];
+                $status = $video['status'];
+                $status['privacyStatus'] = 'public';
+                $snippet['categoryId'] = $meta['youtube_category'];
+                $snippet['description'] = $meta['description'];
+                $snippet['title'] = $meta['title'];
+                $snippet['tags'] = $meta['tags'];
+
+                $youtube->videos->update('snippet,status', $video);
+            }
+        } catch (\Google_Service_Exception $e) {
+            add_filter('redirect_post_location', [$this, 'add_notice_query_var'], 99);
         }
+    }
+
+    public function add_notice_query_var($location)
+    {
+        remove_filter('redirect_post_location', [$this, 'add_notice_query_var'], 99);
+        return add_query_arg(['uitzendingNotice' => Uitzending::NOTICE_YOUTUBE_FAIL], $location);
     }
 
     /**

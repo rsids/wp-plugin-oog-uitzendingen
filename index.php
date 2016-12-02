@@ -4,7 +4,7 @@
 Plugin Name:  OogTV uitzendingen plugin
 Plugin URI:   http://www.oogtv.nl
 Description:  Beheert uitzendingen die op Youtube geplaatst zijn
-Version:      0.0.1
+Version:      1.1.0
 Author:       Ids Klijnsma
 Author URI:   http://www.idsklijnsma.nl/
 

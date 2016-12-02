@@ -9,12 +9,18 @@ class Filters
 
     function __construct()
     {
+    }
+
+    public function init()
+    {
         add_filter('oog-uitzending-latest-video', [$this, 'getLatest']);
         add_filter('oog-uitzending-has-video', [$this, 'hasVideo']);
         add_filter('oog-uitzending-has-radio', [$this, 'hasRadio']);
         add_filter('oog-uitzending-get-youtube-player', [$this, 'getYoutubePlayer']);
         add_filter('oog-uitzending-get-categories', [$this, 'getCategories']);
         add_filter('oog-uitzending-filter-uitzendingen', [$this, 'filterUitzendingen']);
+        add_filter('oog-uitzending-get-latest-videos', [$this, 'getLatestVideos']);
+
     }
 
     public function filterUitzendingen()
@@ -22,6 +28,24 @@ class Filters
         $archive = new Archive();
         $queryVars = $archive->filterArchive();
         return $queryVars;
+    }
+
+    public function getLatestVideos($args)
+    {
+        $query = new \WP_Query([
+            'post_type' => Uitzending::POST_TYPE_TV,
+            'posts_per_page' => $args['num_posts'],
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'tax_query' => [[
+                'taxonomy' => Uitzending::TAXONOMY_PROGRAMME,
+                'field' => 'slug',
+                'terms' => $args['cat_slug']
+            ]]
+
+        ]);
+
+        return $query;
     }
 
     /**
