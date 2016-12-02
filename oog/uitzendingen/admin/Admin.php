@@ -16,6 +16,7 @@ class Admin
     {
         if (!defined('OOG_UITZENDINGEN_CLI_MODE')) {
             add_action('admin_menu', [$this, 'addMenu']);
+            add_action('admin_post_' . Uitzending::ACTION_CONNECT, [$this, 'connectGoogle'], 10, 0);
             add_action('admin_post_' . Uitzending::ACTION_STORE_CODE, [$this, 'storeGoogleCode'], 10);
             add_action('admin_post_' . Uitzending::ACTION_DISCONNECT, [$this, 'disconnectGoogle'], 10);
             add_action('admin_post_' . Uitzending::ACTION_GET_CATEGORIES, [$this, 'getCategories'], 10);
