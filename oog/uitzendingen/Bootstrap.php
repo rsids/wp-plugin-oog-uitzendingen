@@ -296,7 +296,7 @@ class Bootstrap
                             27 => 'Onderwijs',
                             28 => 'Wetenschap en technologie',
                         ],
-                        'default_value' => [],
+                        'default_value' => [25],
                         'allow_null' => 0,
                         'multiple' => 0,
                         'ui' => 0,
