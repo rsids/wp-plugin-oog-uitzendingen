@@ -97,26 +97,26 @@ class Bootstrap
             ]
         ];
 
-        $taxCategorySettings = ['hierarchical' => true,
-
-            'labels' => [
-                'name' => 'Categorie',
-                'singular_name' => 'Categorie',
-                'menu_name' => 'Categorieën',
-            ],
-            'public' => true,
-            // Control the slugs used for this taxonomy
-            'rewrite' => [
-                'slug' => 'categorie', // This controls the base slug that will display before each term
-                'with_front' => false // Don't display the category base before "/locations/"
-            ]
-        ];
+//        $taxCategorySettings = ['hierarchical' => true,
+//
+//            'labels' => [
+//                'name' => 'Categorie',
+//                'singular_name' => 'Categorie',
+//                'menu_name' => 'Categorieën',
+//            ],
+//            'public' => true,
+//            // Control the slugs used for this taxonomy
+//            'rewrite' => [
+//                'slug' => 'categorie', // This controls the base slug that will display before each term
+//                'with_front' => false // Don't display the category base before "/locations/"
+//            ]
+//        ];
 
         register_taxonomy(Uitzending::TAXONOMY_PROGRAMME, Uitzending::POST_TYPE_TV, $taxSettings);
         register_taxonomy(Uitzending::TAXONOMY_PROGRAMME, Uitzending::POST_TYPE_RADIO, $taxSettings);
 
-        register_taxonomy(Uitzending::TAXONOMY_CATEGORY, Uitzending::POST_TYPE_TV, $taxCategorySettings);
-        register_taxonomy(Uitzending::TAXONOMY_CATEGORY, Uitzending::POST_TYPE_RADIO, $taxCategorySettings);
+//        register_taxonomy(Uitzending::TAXONOMY_CATEGORY, Uitzending::POST_TYPE_TV, $taxCategorySettings);
+//        register_taxonomy(Uitzending::TAXONOMY_CATEGORY, Uitzending::POST_TYPE_RADIO, $taxCategorySettings);
     }
 
     private function registerPosts()
@@ -217,7 +217,7 @@ class Bootstrap
                 'label_placement' => 'top',
                 'instruction_placement' => 'label',
                 'hide_on_screen' => [
-                    0 => 'the_content',
+//                    0 => 'the_content',
                     1 => 'excerpt',
                     2 => 'discussion',
                     3 => 'comments',
@@ -348,8 +348,8 @@ class Bootstrap
                 'instruction_placement' => 'label',
                 'hide_on_screen' => [
                     0 => 'permalink',
-                    1 => 'the_content',
-                    2 => 'excerpt',
+//                    1 => 'the_content',
+//                    2 => 'excerpt',
                     3 => 'discussion',
                     4 => 'comments',
                     5 => 'revisions',
@@ -445,25 +445,6 @@ class Bootstrap
                         'maxlength' => '',
                     ],
                     [
-                        'key' => 'field_58317b25928a3',
-                        'label' => 'Omschrijving',
-                        'name' => 'description',
-                        'type' => 'textarea',
-                        'instructions' => '',
-                        'required' => 0,
-                        'conditional_logic' => 0,
-                        'wrapper' => [
-                            'width' => '',
-                            'class' => '',
-                            'id' => '',
-                        ],
-                        'default_value' => '',
-                        'placeholder' => '',
-                        'maxlength' => '',
-                        'rows' => '',
-                        'new_lines' => 'wpautop',
-                    ],
-                    [
                         'key' => 'field_5825e4d98d887',
                         'label' => 'Gekoppeld Artikel',
                         'name' => 'related_post',
@@ -513,8 +494,8 @@ class Bootstrap
                 'instruction_placement' => 'label',
                 'hide_on_screen' => [
                     0 => 'permalink',
-                    1 => 'the_content',
-                    2 => 'excerpt',
+//                    1 => 'the_content',
+//                    2 => 'excerpt',
                     3 => 'discussion',
                     4 => 'comments',
                     5 => 'revisions',

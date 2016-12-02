@@ -15,6 +15,7 @@ class EditUitzending
             add_filter('acf/load_field/name=youtube_video', [$this, 'loadPrivateYoutubeVideos'], 10);
             add_filter('acf/load_field/name=youtube_category', [$this, 'loadYoutubeCategories'], 10);
             add_filter('acf/prepare_field/name=youtube_video', [$this, 'prepareYTVideo'], 10);
+            add_filter('wp_insert_post_data', [$this, 'preSavePost'], '99', 2);
             add_action('acf/save_post', [$this, 'savePost'], 20);
         }
     }
@@ -28,6 +29,28 @@ class EditUitzending
             }
         }
         return $field;
+    }
+
+    /**
+     * Before saving, set the title & content from the related post
+     * @param $data
+     * @param $postArr
+     * @return mixed
+     */
+    public function preSavePost($data, $postArr)
+    {
+
+        $relatedPost = get_field('related_post', $postArr['ID']);
+        if ($relatedPost) {
+            $relatedPost = $relatedPost[0];
+            $data['post_title'] = $data['post_title'] !== '' ? $data['post_title'] : $relatedPost->post_title;
+            if ($data['post_content'] === '') {
+                $data['post_content'] = str_replace('<!--more-->', '', $relatedPost->post_content);
+            }
+        }
+
+        return $data;
+
     }
 
     public function loadYoutubeCategories($field)
@@ -67,7 +90,14 @@ class EditUitzending
             return;
         }
 
+        $programme = wp_get_post_terms( $post_id, Uitzending::TAXONOMY_PROGRAMME );
+
+        if(empty($programme)) {
+            wp_set_object_terms( $post_id, 'nieuws', Uitzending::TAXONOMY_PROGRAMME );
+        }
+
         if ('publish' === get_post_status($post_id)) {
+
             if (get_field('youtube_video', $post_id)) {
                 $tags = get_the_tags($post_id);
                 $meta = get_fields($post_id);
