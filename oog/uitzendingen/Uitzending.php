@@ -25,7 +25,6 @@ class Uitzending
     const POST_TYPE_RADIO = 'uitzending-radio';
 
     const TAXONOMY_PROGRAMME = 'uitzending-programma';
-    const TAXONOMY_CATEGORY = 'uitzending-category';
 
     const OPTION_CATEGORIES = 'oog-uitzending-categories';
 

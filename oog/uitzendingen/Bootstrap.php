@@ -97,26 +97,8 @@ class Bootstrap
             ]
         ];
 
-        $taxCategorySettings = ['hierarchical' => true,
-
-            'labels' => [
-                'name' => 'Categorie',
-                'singular_name' => 'Categorie',
-                'menu_name' => 'Categorieën',
-            ],
-            'public' => true,
-            // Control the slugs used for this taxonomy
-            'rewrite' => [
-                'slug' => 'categorie', // This controls the base slug that will display before each term
-                'with_front' => false // Don't display the category base before "/locations/"
-            ]
-        ];
-
         register_taxonomy(Uitzending::TAXONOMY_PROGRAMME, Uitzending::POST_TYPE_TV, $taxSettings);
         register_taxonomy(Uitzending::TAXONOMY_PROGRAMME, Uitzending::POST_TYPE_RADIO, $taxSettings);
-
-        register_taxonomy(Uitzending::TAXONOMY_CATEGORY, Uitzending::POST_TYPE_TV, $taxCategorySettings);
-        register_taxonomy(Uitzending::TAXONOMY_CATEGORY, Uitzending::POST_TYPE_RADIO, $taxCategorySettings);
     }
 
     private function registerPosts()
@@ -127,7 +109,6 @@ class Bootstrap
             'supports' => ['title', 'editor', 'author', 'thumbnail'],
             'taxonomies' => [
                 Uitzending::TAXONOMY_PROGRAMME,
-                Uitzending::TAXONOMY_CATEGORY,
                 'post_tag'
             ],
             'show_in_nav_menus' => false,
