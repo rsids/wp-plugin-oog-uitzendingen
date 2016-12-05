@@ -32,6 +32,17 @@ class Uitzending
     const NOTICE_CATEGORY_ERR = 2;
     const NOTICE_YOUTUBE_FAIL = 3;
 
+    const ACF_FIELD_FILENAME = 'field_58360c2785665';
+    const ACF_FIELD_YOUTUBE_VIDEO = 'field_58360a6f17637';
+    const ACF_FIELD_YOUTUBE_CATEGORY = 'field_58360a6f176bc';
+    const ACF_FIELD_EXTERNAL_YOUTUBE_VIDEO = 'field_58360a6f17775';
+    const ACF_FIELD_AUTHOR = 'field_5830c63d280ff';
+    const ACF_FIELD_EDITOR = 'field_5831f22dc57ba';
+    const ACF_FIELD_CAMERA = 'field_5830c65528100';
+    const ACF_FIELD_SPEAKERS = 'field_5830c67028101';
+    const ACF_FIELD_RELATED_POST = 'field_5825e4d98d887';
+
+
     static function GetDefaultProgrammes()
     {
         return [

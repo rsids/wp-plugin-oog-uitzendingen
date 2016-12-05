@@ -46,19 +46,6 @@ class Youtube
 
     public function updateVideo($id, $meta)
     {
-        $ytMeta = [
-            'id' => $id,
-            'kind' => 'youtube#video',
-            'snippet' => [
-                'title' => $meta['title'],
-                'tags' => $meta['tags'],
-                'categoryId' => $meta['youtube_category'],
-                'description' => $meta['description']
-            ],
-            'status' => [
-                'privacyStatus' => 'public'
-            ]
-        ];
 
         try {
             $client = Admin::GetGoogleClient();
@@ -80,6 +67,7 @@ class Youtube
                 $youtube->videos->update('snippet,status', $video);
             }
         } catch (\Google_Service_Exception $e) {
+            error_log($e->getMessage());
             add_filter('redirect_post_location', [$this, 'add_notice_query_var'], 99);
         }
     }

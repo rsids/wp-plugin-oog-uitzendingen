@@ -15,8 +15,9 @@ class EditUitzending
             add_filter('acf/load_field/name=youtube_video', [$this, 'loadPrivateYoutubeVideos'], 10);
             add_filter('acf/load_field/name=youtube_category', [$this, 'loadYoutubeCategories'], 10);
             add_filter('acf/prepare_field/name=youtube_video', [$this, 'prepareYTVideo'], 10);
+            add_filter('acf/fields/relationship/query/name=related_post', [$this, 'sortRelatedPosts'], 10);
             add_filter('wp_insert_post_data', [$this, 'preSavePost'], '99', 2);
-            add_action('acf/save_post', [$this, 'savePost'], 20);
+            add_action('acf/save_post', [$this, 'savePost'], 10);
         }
     }
 
@@ -31,6 +32,13 @@ class EditUitzending
         return $field;
     }
 
+    public function sortRelatedPosts($posts)
+    {
+        $posts['order'] = 'DESC';
+        $posts['orderby'] = 'date';
+        return $posts;
+    }
+
     /**
      * Before saving, set the title & content from the related post
      * @param $data
@@ -40,17 +48,26 @@ class EditUitzending
     public function preSavePost($data, $postArr)
     {
 
-        $relatedPost = get_field('related_post', $postArr['ID']);
-        if ($relatedPost) {
-            $relatedPost = $relatedPost[0];
-            $data['post_title'] = $data['post_title'] !== '' ? $data['post_title'] : $relatedPost->post_title;
-            if ($data['post_content'] === '') {
-                $data['post_content'] = str_replace('<!--more-->', '', $relatedPost->post_content);
+        // Check if related post is set
+        if (array_key_exists('acf', $postArr)) {
+            $relatedPost = $postArr['acf'][Uitzending::ACF_FIELD_RELATED_POST];
+            if ($relatedPost && count($relatedPost) > 0) {
+
+                // Fetch it
+                $relatedPost = get_post($relatedPost[0]);
+
+                if ($relatedPost && !is_wp_error($relatedPost)) {
+                    // Set title & content if not set
+                    $data['post_title'] = $data['post_title'] !== '' ? $data['post_title'] : $relatedPost->post_title;
+
+                    if ($data['post_content'] === '') {
+                        $data['post_content'] = str_replace('<!--more-->', '', $relatedPost->post_content);
+                    }
+
+                }
             }
         }
-
         return $data;
-
     }
 
     public function loadYoutubeCategories($field)
@@ -82,6 +99,7 @@ class EditUitzending
      */
     public function savePost($post_id)
     {
+
         if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
             return;
         }
@@ -90,19 +108,27 @@ class EditUitzending
             return;
         }
 
-        $programme = wp_get_post_terms( $post_id, Uitzending::TAXONOMY_PROGRAMME );
+        $programme = wp_get_post_terms($post_id, Uitzending::TAXONOMY_PROGRAMME);
 
-        if(empty($programme)) {
-            wp_set_object_terms( $post_id, 'nieuws', Uitzending::TAXONOMY_PROGRAMME );
+        if (empty($programme)) {
+            wp_set_object_terms($post_id, 'nieuws', Uitzending::TAXONOMY_PROGRAMME);
         }
 
         if ('publish' === get_post_status($post_id)) {
 
-            if (get_field('youtube_video', $post_id)) {
-                $tags = get_the_tags($post_id);
-                $meta = get_fields($post_id);
+            if ($_POST['acf'][Uitzending::ACF_FIELD_YOUTUBE_VIDEO]) {
+
+                $meta = [];
+                $meta['tags'] = [];
                 $meta['title'] = get_the_title($post_id);
-                $meta['description'] = get_the_content();
+                $meta['description'] = get_post_field('post_content', $post_id);
+
+                $meta['youtube_video'] = $_POST['acf'][Uitzending::ACF_FIELD_YOUTUBE_VIDEO];
+                $meta['youtube_category'] = $_POST['acf'][Uitzending::ACF_FIELD_YOUTUBE_CATEGORY];
+
+                $meta['description'] = strip_tags($this->br2nl($meta['description']));
+
+                $tags = get_the_tags($post_id);
                 if ($tags && !is_wp_error($tags)) {
                     $meta['tags'] = array_map(
                         function ($tag) {
@@ -127,4 +153,5 @@ class EditUitzending
     {
         return preg_replace('/\<br(\s*)?\/?\>/i', "\n", $string);
     }
+
 }
