@@ -90,7 +90,11 @@ class Filters
         ], ARRAY_A);
 
         if (count($recent_posts) > 0) {
-            $this->getYoutubePlayer($recent_posts[0]['ID']);
+            $sc = new Shortcodes();
+            $sc->addYoutubePlayer([
+                    'uitzending' => $this->getYoutubePlayer($recent_posts[0]['ID'])
+                ]);
+
         }
 
     }
@@ -108,15 +112,12 @@ class Filters
         }
 
         if ($youtube_url) {
-            $height = round($width / 1.602);
-            echo <<<OOG
-                <div class='video-container'>
-                    <iframe class="youtube-player" type="text/html" width="{$width}"
-                            height="{$height}"
-                            src="https://www.youtube.com/embed/{$youtube_url}?rel=0" frameborder="0">
-                    </iframe>
-                </div>
-OOG;
+            $sc = new Shortcodes();
+            $sc->addYoutubePlayer(
+                [
+                    'youtube' => $youtube_url,
+                    'width' => $width
+                ]);
 
         }
     }
@@ -129,7 +130,7 @@ OOG;
      */
     private function hasMedia($postId, $type)
     {
-        $postId = (int) $postId;
+        $postId = (int)$postId;
         $type = $type === Uitzending::POST_TYPE_TV ? Uitzending::POST_TYPE_TV : Uitzending::POST_TYPE_RADIO;
         $posts = get_posts([
             'numberposts' => 1,
@@ -137,7 +138,7 @@ OOG;
             'meta_query' => [
                 [
                     'key' => 'related_post',
-                    'value' => '"'.$postId.'"',
+                    'value' => '"' . $postId . '"',
                     'compare' => 'LIKE'
 
                 ]

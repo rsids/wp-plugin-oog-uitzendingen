@@ -17,6 +17,7 @@ class Bootstrap
     private $admin;
     private $filters;
     private $archive;
+    private $shortcodes;
 
     function __construct()
     {
@@ -28,6 +29,8 @@ class Bootstrap
         $this->filters = new Filters();
         $this->filters->init();
         $this->archive = new Archive();
+        $this->shortcodes = new Shortcodes();
+        $this->shortcodes->init();
 
         register_activation_hook(OOG_UITZENDINGEN_PLUGIN_FILE, [$this, 'activation']);
         register_deactivation_hook(OOG_UITZENDINGEN_PLUGIN_FILE, [$this, 'deactivation']);
@@ -144,7 +147,7 @@ class Bootstrap
             ],
             'show_in_menu' => 'edit.php?post_type=' . Uitzending::POST_TYPE_TV,
             'rewrite' => [
-                'slug' => get_option('oog-uitzendingen-tv-slug', 'uitzending-gemist/radio')
+                'slug' => get_option('oog-uitzendingen-radio-slug', 'uitzending-gemist/radio')
             ]
         ]);
 
