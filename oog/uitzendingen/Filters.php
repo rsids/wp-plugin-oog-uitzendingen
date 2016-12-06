@@ -125,15 +125,23 @@ OOG;
      * Checks if the given post has any media attached to it
      * @param $postId
      * @param $type
-     * @return bool
+     * @return bool|int
      */
     private function hasMedia($postId, $type)
     {
+        $postId = (int) $postId;
+        $type = $type === Uitzending::POST_TYPE_TV ? Uitzending::POST_TYPE_TV : Uitzending::POST_TYPE_RADIO;
         $posts = get_posts([
             'numberposts' => 1,
             'post_type' => $type,
-            'meta_key' => 'related_post',
-            'meta_value' => $postId,
+            'meta_query' => [
+                [
+                    'key' => 'related_post',
+                    'value' => '"'.$postId.'"',
+                    'compare' => 'LIKE'
+
+                ]
+            ]
         ]);
         if (count($posts) > 0) {
             return $posts[0]->ID;
