@@ -3,3 +3,4 @@ vendor
 queue
 *.mp4
 *.json
+!composer.json
