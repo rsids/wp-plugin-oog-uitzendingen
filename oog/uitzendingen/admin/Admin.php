@@ -100,6 +100,8 @@ OOG;
             update_option('oog-uitzending-access_token', json_encode($token));
             update_option('oog-uitzending-id_token', $token['id_token']);
             update_option('oog-uitzending-refresh_token', $token['refresh_token']);
+        } else {
+            error_log('Missing key "access_token" while authenticating google account, response was: ' . var_export($token, true));
         }
 
     }
@@ -166,6 +168,8 @@ OOG;
                 if (array_key_exists('access_token', $token)) {
                     update_option('oog-uitzending-access_token', json_encode($token));
                     update_option('oog-uitzending-id_token', $token['id_token']);
+                }else {
+                    error_log('Missing key "access_token" while updating authentication, response was: ' . var_export($token, true));
                 }
             }
 

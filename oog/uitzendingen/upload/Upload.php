@@ -23,7 +23,7 @@ class Upload
         if (!is_dir($baseDir . '/queue/failed')) {
             mkdir($baseDir . '/queue/failed', 0777, true);
         }
-        $this->log("=============== \033[31mYou\033[0mTube uploader ===============\n");
+        $this->log("=============== YouTube uploader ===============\n");
 
         $this->client = $this->getGoogleClient();
     }
@@ -54,7 +54,7 @@ class Upload
                 $target = $this->moveFile($video, 'inprogress');
                 $this->upload($target);
             }
-            $this->log("\033[34mGeen video's meer in de queue\033[0m\n");
+            $this->log("Geen video's meer in de queue\n");
         }
     }
 
@@ -68,7 +68,7 @@ class Upload
             $parts = explode('/', $path);
             $filename = array_pop($parts);
             $mtime = filemtime($path);
-            $this->log("\nVideo \033[1m$filename\033[0m uploaden");
+            $this->log("\nVideo $filename uploaden");
 
             // Set it as title
             $snippet = new \Google_Service_YouTube_VideoSnippet();
@@ -89,14 +89,14 @@ class Upload
             $video->setSnippet($snippet);
             $video->setStatus($status);
 
-            $chunkSizeBytes = 1 * 1024 * 1024;
+            $chunkSizeBytes = 20 * 1024 * 1024;
 
             $client->setDefer(true);
 
             // Create a request for the API's videos.insert method to create and upload the video.
             $insertRequest = $youtube->videos->insert("status,snippet", $video);
 
-            // Create a MediaFileUpload object for resumable uploads.
+            // Create a MediaFileUpload object for resumeable uploads.
             $media = new \Google_Http_MediaFileUpload(
                 $client,
                 $insertRequest,
@@ -117,7 +117,11 @@ class Upload
             while (!$status && !feof($handle)) {
                 $i += $chunkSizeBytes;
                 $chunk = fread($handle, $chunkSizeBytes);
-                $status = $media->nextChunk($chunk);
+                try {
+                    $status = $media->nextChunk($chunk);
+                } catch(\Exception $e) {
+                    $this->log($e->getMessage());
+                }
                 $progress = '   ' . min(100, ceil($i / $total * 100)) . '%';
                 $progress = substr($progress, -4);
                 $this->log(chr(8) . chr(8) . chr(8) . chr(8) . "$progress");
@@ -128,17 +132,16 @@ class Upload
             // If you want to make other calls after the file upload, set setDefer back to false
             $client->setDefer(false);
             $this->moveFile($path, 'done');
-            $this->log(" \033[32mgelukt!\033[0m\n");
+            $this->log(" gelukt!\n");
         } catch (\Google_Service_Exception $e) {
-            $this->log(sprintf("\n\033[31mA service error occurred: \033[0m%s\n", $e->getMessage()));
+            $this->log(sprintf("\nA service error occurred: %s\n", $e->getMessage()));
             $this->moveFile($path, 'failed');
         } catch (\Google_Exception $e) {
-            $this->log(sprintf("\n\033[31mAn client error occurred: \033[0m%s\n", $e->getMessage()));
+            $this->log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
             $this->moveFile($path, 'failed');
         } catch (\Exception $e) {
-            $this->log(sprintf("\n\033[31mAn client error occurred: \033[0m%s\n", $e->getMessage()));
+            $this->log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
             $this->moveFile($path, 'failed');
-
         }
     }
 
@@ -166,7 +169,7 @@ class Upload
                 $token = $client->fetchAccessTokenWithRefreshToken($auth->refresh_token);
 
                 if (array_key_exists('error', $token)) {
-                    $this->log("\033[31mFout bij authenticeren\033[0m\n");
+                    $this->log("Fout bij authenticeren\n");
                     unlink(SCRIPT_DIR . '/credentials.json');
                     $client = $this->requestAuthCode($client);
                 }
@@ -205,10 +208,15 @@ class Upload
 
     private function log($message)
     {
-        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            $message = preg_replace('/\\.*?\[[0-9]{0,3}/', '', $message);
+        $handle = @fopen(SCRIPT_DIR . '/log.txt', 'a+');
+
+        // Write to log file
+        if ($handle) {
+            fwrite($handle, date('c') . ': ' . $message . "\n");
+            fclose($handle);
         }
 
-        echo $message;
+        // Write to stdout
+            echo $message;
     }
 }
