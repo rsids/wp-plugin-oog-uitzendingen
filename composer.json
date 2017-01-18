@@ -3,7 +3,7 @@
   "description": "OogTV Uitzendingen plugin for Wordpress",
   "type": "wordpress-plugin",
   "license": "GPL",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "authors": [
     {
       "name": "Ids Klijnsma",

@@ -60,8 +60,8 @@ class Youtube
                 $status = $video['status'];
                 $status['privacyStatus'] = 'public';
                 $snippet['categoryId'] = $meta['youtube_category'];
-                $snippet['description'] = $meta['description'];
-                $snippet['title'] = $meta['title'];
+                $snippet['description'] = html_entity_decode($meta['description'], ENT_QUOTES | ENT_XML1, 'UTF-8');
+                $snippet['title'] = html_entity_decode($meta['title'], ENT_QUOTES | ENT_XML1, 'UTF-8');
                 $snippet['tags'] = $meta['tags'];
 
                 $youtube->videos->update('snippet,status', $video);
