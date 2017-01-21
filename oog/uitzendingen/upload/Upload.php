@@ -1,31 +1,29 @@
 <?php
 namespace oog\uitzendingen\upload;
 
+use GuzzleHttp\Psr7\Request;
+use oog\uitzendingen\db\sqlite\DB;
+
 class Upload
 {
+    const CHUNK_SIZE_BYTES = 10 * 1024 * 1024;
 
     private $baseDir;
-    private $client;
+
+    private $db;
+
+    private $qm;
+
 
     public function __construct($baseDir)
     {
         $this->baseDir = $baseDir;
 
-        if (!is_dir($baseDir . '/queue')) {
-            mkdir($baseDir . '/queue', 0777, true);
-        }
-        if (!is_dir($baseDir . '/queue/inprogress')) {
-            mkdir($baseDir . '/queue/inprogress', 0777, true);
-        }
-        if (!is_dir($baseDir . '/queue/done')) {
-            mkdir($baseDir . '/queue/done', 0777, true);
-        }
-        if (!is_dir($baseDir . '/queue/failed')) {
-            mkdir($baseDir . '/queue/failed', 0777, true);
-        }
-        $this->log("=============== YouTube uploader ===============\n");
+        $this->db = new DB(SCRIPT_DIR . '/progress.db');
+        $this->qm = new QueueManager($baseDir);
 
-        $this->client = $this->getGoogleClient();
+        Logger::Log("=============== YouTube uploader ===============\n", false);
+
     }
 
     /**
@@ -33,16 +31,24 @@ class Upload
      */
     public function checkForFiles()
     {
-        $videos = glob($this->baseDir . '/*.mp4');
 
-        foreach ($videos as $video) {
-            $parts = explode('/', $video);
-            $filename = array_pop($parts);
-            rename($video,
-                $this->baseDir . DIRECTORY_SEPARATOR . 'queue' . DIRECTORY_SEPARATOR . $filename);
+        $interrupted = glob($this->baseDir . '/queue/inprogress/*.mp4');
+
+        if (count($interrupted) > 0) {
+            $this->processInterrupted();
+        } else {
+
+            $videos = glob($this->baseDir . '/*.mp4');
+            foreach ($videos as $video) {
+                $parts = explode('/', $video);
+                $filename = array_pop($parts);
+                rename($video,
+                    $this->baseDir . DIRECTORY_SEPARATOR . 'queue' . DIRECTORY_SEPARATOR . $filename);
+            }
+
+            $this->processQueue();
         }
 
-        $this->processQueue();
     }
 
     private function processQueue()
@@ -51,50 +57,82 @@ class Upload
         $videos = glob($this->baseDir . '/queue/*.mp4');
         if ($videos) {
             foreach ($videos as $video) {
-                $target = $this->moveFile($video, 'inprogress');
+                $target = $this->qm->moveFile($video, 'inprogress');
                 $this->upload($target);
             }
-            $this->log("Geen video's meer in de queue\n");
+            Logger::Log("Geen video's meer in de queue\n");
+        }
+    }
+
+    public function processInterrupted()
+    {
+        $videos = glob($this->baseDir . '/queue/inprogress/*.mp4');
+        foreach ($videos as $video) {
+            $this->resumeUpload($video);
+        }
+    }
+
+    private function resumeUpload($path)
+    {
+        $parts = explode('/', $path);
+        $filename = array_pop($parts);
+        $data = $this->db->getResumeUri($filename);
+        if (!$data) {
+            $this->qm->moveFile($path, 'failed');
+            return;
+        }
+
+        $client = Auth::GetGoogleClient();
+
+        try {
+            // Get filename
+            Logger::Log("\nVideo $path upload hervatten");
+            $client->setDefer(true);
+
+//            $request = new Request('PUT', $data['resumeuri']);
+            $request = $this->createYoutubeVideo($client, $path);
+//            $request->set
+
+            // Create a MediaFileUpload object for resumeable uploads.
+            $media = new \Google_Http_MediaFileUpload(
+                $client,
+                $request,
+                'video/*',
+                null,
+                true,
+                Upload::CHUNK_SIZE_BYTES
+            );
+            $media->setFileSize(filesize($path));
+            $media->resume($data['resumeuri']);
+            $this->uploadChunks($path, $media, $media->getProgress());
+
+            // If you want to make other calls after the file upload, set setDefer back to false
+            $client->setDefer(false);
+            $this->qm->moveFile($path, 'done');
+            Logger::Log(" gelukt!\n");
+        } catch (\Google_Service_Exception $e) {
+            Logger::Log(sprintf("\nA service error occurred: %s\n", $e->getMessage()));
+            $this->qm->moveFile($path, 'failed');
+        } catch (\Google_Exception $e) {
+            Logger::Log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
+            $this->qm->moveFile($path, 'failed');
+        } catch (\Exception $e) {
+            Logger::Log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
+            $this->qm->moveFile($path, 'failed');
         }
     }
 
     private function upload($path)
     {
-        $client = $this->client;
-        $youtube = new \Google_Service_YouTube($client);
+        $client = Auth::GetGoogleClient();
+        $client->setDefer(true);
 
         try {
             // Get filename
             $parts = explode('/', $path);
             $filename = array_pop($parts);
-            $mtime = filemtime($path);
-            $this->log("\nVideo $filename uploaden");
-
-            // Set it as title
-            $snippet = new \Google_Service_YouTube_VideoSnippet();
-            $snippet->setTitle(
-                sprintf('%s, (%s)',
-                    $filename,
-                    date('d-m-Y H:i:s', $mtime))
-            );
-            $snippet->setDescription("");
-            $snippet->setCategoryId("22");
-
-            // Set video to private
-            $status = new \Google_Service_YouTube_VideoStatus();
-            $status->privacyStatus = "private";
-
-            // Attach metadata to video
-            $video = new \Google_Service_YouTube_Video();
-            $video->setSnippet($snippet);
-            $video->setStatus($status);
-
-            $chunkSizeBytes = 20 * 1024 * 1024;
-
-            $client->setDefer(true);
-
-            // Create a request for the API's videos.insert method to create and upload the video.
-            $insertRequest = $youtube->videos->insert("status,snippet", $video);
+            Logger::Log("\nVideo $filename uploaden");
+            $insertRequest = $this->createYoutubeVideo($client, $path);
 
             // Create a MediaFileUpload object for resumeable uploads.
             $media = new \Google_Http_MediaFileUpload(
@@ -103,120 +141,100 @@ class Upload
                 'video/*',
                 null,
                 true,
-                $chunkSizeBytes
+                Upload::CHUNK_SIZE_BYTES
             );
-            $media->setFileSize(filesize($path));
 
-            $i = 0;
-            $total = filesize($path);
-
-            // Read the media file and upload it chunk by chunk.
-            $status = false;
-            $handle = fopen($path, "rb");
-            $this->log('   0%');
-            while (!$status && !feof($handle)) {
-                $i += $chunkSizeBytes;
-                $chunk = fread($handle, $chunkSizeBytes);
-                try {
-                    $status = $media->nextChunk($chunk);
-                } catch(\Exception $e) {
-                    $this->log($e->getMessage());
-                }
-                $progress = '   ' . min(100, ceil($i / $total * 100)) . '%';
-                $progress = substr($progress, -4);
-                $this->log(chr(8) . chr(8) . chr(8) . chr(8) . "$progress");
-            }
-
-            fclose($handle);
+            $this->uploadChunks($path, $media, 0);
 
             // If you want to make other calls after the file upload, set setDefer back to false
             $client->setDefer(false);
-            $this->moveFile($path, 'done');
-            $this->log(" gelukt!\n");
+            $this->qm->moveFile($path, 'done');
+            Logger::Log(" gelukt!\n");
         } catch (\Google_Service_Exception $e) {
-            $this->log(sprintf("\nA service error occurred: %s\n", $e->getMessage()));
-            $this->moveFile($path, 'failed');
+            Logger::Log(sprintf("\nA service error occurred: %s\n", $e->getMessage()));
+            $this->qm->moveFile($path, 'failed');
         } catch (\Google_Exception $e) {
-            $this->log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
-            $this->moveFile($path, 'failed');
+            Logger::Log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
+            $this->qm->moveFile($path, 'failed');
         } catch (\Exception $e) {
-            $this->log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
-            $this->moveFile($path, 'failed');
+            Logger::Log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
+            $this->qm->moveFile($path, 'failed');
         }
     }
 
-    private function moveFile($path, $target)
+    /**
+     * @param string $path
+     * @param \Google_Http_MediaFileUpload $media
+     * @param int $start
+     */
+    private function uploadChunks($path, $media, $start = 0)
     {
+        // Get filename
         $parts = explode('/', $path);
         $filename = array_pop($parts);
-        rename($path, $this->baseDir . DIRECTORY_SEPARATOR . "queue/$target/$filename");
-        return $this->baseDir . DIRECTORY_SEPARATOR . "queue/$target/$filename";
-    }
+        $media->setFileSize(filesize($path));
 
-    private function getGoogleClient()
-    {
-        $client = new \Google_Client();
-        $client->setAuthConfigFile(SCRIPT_DIR . '/client_secret.json');
-        $client->setAccessType('offline');
-        $client->addScope(\Google_Service_YouTube::YOUTUBE);
-        $client->addScope(\Google_Service_YouTube::YOUTUBE_UPLOAD);
+        $i = $start;
+        $total = filesize($path);
 
-        if (file_exists(SCRIPT_DIR . '/credentials.json')) {
-            $auth = json_decode(file_get_contents(SCRIPT_DIR . '/credentials.json'));
-            $client->setAccessToken((array)$auth);
-
-            if ($client->isAccessTokenExpired()) {
-                $token = $client->fetchAccessTokenWithRefreshToken($auth->refresh_token);
-
-                if (array_key_exists('error', $token)) {
-                    $this->log("Fout bij authenticeren\n");
-                    unlink(SCRIPT_DIR . '/credentials.json');
-                    $client = $this->requestAuthCode($client);
-                }
+        // Read the media file and upload it chunk by chunk.
+        $status = false;
+        $handle = fopen($path, "rb");
+        Logger::Log(sprintf(
+            '   %d%%',
+            min(100, ceil($i / $total * 100))
+        ));
+        while (!$status && !feof($handle)) {
+            $i += Upload::CHUNK_SIZE_BYTES;
+            $chunk = fread($handle, Upload::CHUNK_SIZE_BYTES);
+            try {
+                $this->db->storeResumeUri($filename, $media->getResumeUri(), 0);
+                $status = $media->nextChunk($chunk);
+            } catch (\Exception $e) {
+                Logger::Log($e->getMessage());
             }
-        } else {
-            $client = $this->requestAuthCode($client);
-
+            $progress = sprintf(
+                '   %d%%',
+                min(100, ceil($i / $total * 100))
+            );
+            $progress = substr($progress, -4);
+            Logger::Log(chr(8) . chr(8) . chr(8) . chr(8) . "$progress");
         }
 
-
-        return $client;
+        fclose($handle);
     }
 
-    private function requestAuthCode(\Google_Client $client)
+    private function createYoutubeVideo($client, $path)
     {
-        $auth_url = $client->createAuthUrl();
-        echo "\nGeen youtube koppeling gevonden, ga naar de volgende url en plak de code, gevolgd door [Enter]\n";
-        echo $auth_url;
-        echo "\nCode:\n";
+        // Get filename
+        $parts = explode('/', $path);
+        $filename = array_pop($parts);
 
-        $line = fgets(STDIN);
-        if (trim($line) != '') {
-            $this->log("Code opgeslagen: $line\n");
-            $result = $client->authenticate($line);
-            if (array_key_exists('access_token', $result)) {
-                file_put_contents(SCRIPT_DIR . '/credentials.json', json_encode($result));
-            } else {
-                $this->log("Fout bij authenticatie, foutmelding: " . $result['error_description'] . "\n");
-                exit;
-            }
-        }
-        fclose(STDIN);
+        $youtube = new \Google_Service_YouTube($client);
+        $mtime = filemtime($path);
+        $snippet = new \Google_Service_YouTube_VideoSnippet();
 
-        return $client;
+        // Set it as title
+        $snippet->setTitle(
+            sprintf('%s, (%s)',
+                $filename,
+                date('d-m-Y H:i:s', $mtime))
+        );
+        $snippet->setDescription('');
+        $snippet->setCategoryId('22');
+
+        // Set video to private
+        $status = new \Google_Service_YouTube_VideoStatus();
+        $status->privacyStatus = "private";
+
+        // Attach metadata to video
+        $video = new \Google_Service_YouTube_Video();
+        $video->setSnippet($snippet);
+        $video->setStatus($status);
+
+        // Create a request for the API's videos.insert method to create and upload the video.
+        $insertRequest = $youtube->videos->insert("status,snippet", $video);
+        return $insertRequest;
     }
 
-    private function log($message)
-    {
-        $handle = @fopen(SCRIPT_DIR . '/log.txt', 'a+');
-
-        // Write to log file
-        if ($handle) {
-            fwrite($handle, date('c') . ': ' . $message . "\n");
-            fclose($handle);
-        }
-
-        // Write to stdout
-            echo $message;
-    }
 }
