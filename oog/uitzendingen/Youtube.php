@@ -1,13 +1,18 @@
 <?php
 
-
 namespace oog\uitzendingen;
 
-
-use oog\uitzendingen\admin\Admin;
+use oog\uitzendingen\providers\AbstractGoogleClientProvider;
 
 class Youtube
 {
+
+    private $provider;
+
+    function __construct(AbstractGoogleClientProvider $provider)
+    {
+        $this->provider = $provider;
+    }
 
     /**
      * Fetches the available Youtube Categories
@@ -15,7 +20,7 @@ class Youtube
      */
     public function getCategories()
     {
-        $client = Admin::GetGoogleClient();
+        $client = $this->provider->getGoogleClient();
         $youtube = new \Google_Service_YouTube($client);
 
         $cleaned = [];
@@ -48,7 +53,7 @@ class Youtube
     {
 
         try {
-            $client = Admin::GetGoogleClient();
+            $client = $this->provider->getGoogleClient();
             $youtube = new \Google_Service_YouTube($client);
 
             $listResponse = $youtube->videos->listVideos('snippet,status', ['id' => $id]);
@@ -68,14 +73,18 @@ class Youtube
             }
         } catch (\Google_Service_Exception $e) {
             error_log($e->getMessage());
-            add_filter('redirect_post_location', [$this, 'add_notice_query_var'], 99);
+            if (function_exists('add_filter')) {
+                add_filter('redirect_post_location', [$this, 'add_notice_query_var'], 99);
+            }
         }
     }
 
     public function add_notice_query_var($location)
     {
-        remove_filter('redirect_post_location', [$this, 'add_notice_query_var'], 99);
-        return add_query_arg(['uitzendingNotice' => Uitzending::NOTICE_YOUTUBE_FAIL], $location);
+        if (function_exists('remove_filter') && function_exists('add_query_arg')) {
+            remove_filter('redirect_post_location', [$this, 'add_notice_query_var'], 99);
+            return add_query_arg(['uitzendingNotice' => Uitzending::NOTICE_YOUTUBE_FAIL], $location);
+        }
     }
 
     /**
@@ -85,7 +94,7 @@ class Youtube
      */
     public function getVideos($private = false)
     {
-        $client = Admin::GetGoogleClient();
+        $client = $this->provider->getGoogleClient();
         $youtube = new \Google_Service_YouTube($client);
         $result = [];
         setlocale(LC_TIME, ['nl_NL', 'nl_NL.utf8']);

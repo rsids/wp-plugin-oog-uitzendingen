@@ -9,6 +9,11 @@
 namespace oog\uitzendingen\upload;
 
 
+/**
+ * Class Auth
+ * @package oog\uitzendingen\upload
+ * @deprecated
+ */
 class Auth
 {
     public static function GetGoogleClient()

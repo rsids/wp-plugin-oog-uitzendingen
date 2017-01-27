@@ -9,6 +9,7 @@
 namespace oog\uitzendingen;
 
 use oog\uitzendingen\admin\Admin;
+use oog\uitzendingen\providers\WordpressGoogleClientProvider;
 
 class Bootstrap
 {
@@ -18,10 +19,12 @@ class Bootstrap
     private $filters;
     private $archive;
     private $shortcodes;
+    private $provider;
 
     function __construct()
     {
-        $this->admin = new Admin();
+        $this->provider = new WordpressGoogleClientProvider();
+        $this->admin = new Admin($this->provider);
         $this->admin->addActionsAndHooks();
 
         $this->setupACF();

@@ -3,6 +3,7 @@ namespace oog\uitzendingen\upload;
 
 use GuzzleHttp\Psr7\Request;
 use oog\uitzendingen\db\sqlite\DB;
+use oog\uitzendingen\providers\JsonGoogleClientProvider;
 
 class Upload
 {
@@ -14,10 +15,16 @@ class Upload
 
     private $qm;
 
+    private $provider;
+
 
     public function __construct($baseDir)
     {
         $this->baseDir = $baseDir;
+
+        $this->provider = new JsonGoogleClientProvider();
+        $this->provider->setClientSecretJson(SCRIPT_DIR . '/client_secret.json');
+        $this->provider->setCredentialsJson(SCRIPT_DIR . '/credentials.json');
 
         $this->db = new DB(SCRIPT_DIR . '/progress.db');
         $this->qm = new QueueManager($baseDir);
@@ -124,7 +131,7 @@ class Upload
 
     private function upload($path)
     {
-        $client = Auth::GetGoogleClient();
+        $client = $this->provider->getGoogleClient();
         $client->setDefer(true);
 
         try {

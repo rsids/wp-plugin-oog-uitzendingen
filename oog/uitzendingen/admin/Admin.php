@@ -2,6 +2,7 @@
 
 namespace oog\uitzendingen\admin;
 
+use oog\uitzendingen\providers\AbstractGoogleClientProvider;
 use oog\uitzendingen\Uitzending;
 use oog\uitzendingen\Youtube;
 
@@ -11,6 +12,12 @@ class Admin
     const OPTIONS_PAGE = 'ooguitzendingen-options';
 
     private $edit;
+    private $provider;
+
+    function __construct(AbstractGoogleClientProvider $provider)
+    {
+        $this->provider = $provider;
+    }
 
     public function addActionsAndHooks()
     {
@@ -79,7 +86,8 @@ OOG;
 
     public function disconnectGoogle()
     {
-        $client = Admin::GetGoogleClient();
+
+        $client = $this->provider->getGoogleClient();
         $client->revokeToken(get_option('oog-uitzending-refresh_token'));
         $client->revokeToken(get_option('oog-uitzending-access_token'));
 
@@ -91,7 +99,7 @@ OOG;
 
     public function storeGoogleCode()
     {
-        $client = Admin::GetGoogleClient(false);
+        $client = $this->provider->getGoogleClient(false);
 
         $client->setRedirectUri(get_home_url());
         $token = $client->fetchAccessTokenWithAuthCode($_POST['code']);
@@ -135,6 +143,7 @@ OOG;
     }
 
     /**
+     * @deprecated
      * @param bool $setToken
      * @return \Google_Client
      */
