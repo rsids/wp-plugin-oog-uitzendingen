@@ -8,7 +8,7 @@ use oog\uitzendingen\Youtube;
 
 class Upload
 {
-    const CHUNK_SIZE_BYTES = 10 * 1024 * 1024;
+    const CHUNK_SIZE_BYTES = 2 * 1024 * 1024;
 
     private $baseDir;
 
@@ -90,46 +90,57 @@ class Upload
             return;
         }
 
-        $client = $this->provider->getGoogleClient();
+//        $client = $this->provider->getGoogleClient();
 //        $id = $this->getYoutubeVideo($filename);
 //        var_dump($id);
 //exit;
-        try {
-            // Get filename
-            Logger::Log("\nVideo $path upload hervatten");
-            $client->setDefer(true);
+        $ch = curl_init($data['resumeuri']);
+        curl_setopt($ch, CURLOPT_PUT, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER,
+            [
+                'Content-Range: bytes */*'
+            ]
+        );
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-//            $request = new Request('PUT', $data['resumeuri']);
-            $request = $this->getYoutubeVideo($client, $filename);
-//            $request->set
-
-            // Create a MediaFileUpload object for resumeable uploads.
-            $media = new \Google_Http_MediaFileUpload(
-                $client,
-                $request,
-                'video/*',
-                null,
-                true,
-                Upload::CHUNK_SIZE_BYTES
-            );
-            $media->setFileSize(filesize($path));
-            $media->resume($data['resumeuri']);
-            $this->uploadChunks($path, $media, $media->getProgress());
-
-            // If you want to make other calls after the file upload, set setDefer back to false
-            $client->setDefer(false);
-            $this->qm->moveFile($path, 'done');
-            Logger::Log(" gelukt!\n");
-        } catch (\Google_Service_Exception $e) {
-            Logger::Log(sprintf("\nA service error occurred: %s\n", $e->getMessage()));
-            $this->qm->moveFile($path, 'failed');
-        } catch (\Google_Exception $e) {
-            Logger::Log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
-            $this->qm->moveFile($path, 'failed');
-        } catch (\Exception $e) {
-            Logger::Log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
-            $this->qm->moveFile($path, 'failed');
-        }
+        $result = curl_exec($ch);
+        var_dump($result);
+//        try {
+//            // Get filename
+//            Logger::Log("\nVideo $path upload hervatten");
+//            $client->setDefer(true);
+//
+////            $request = new Request('PUT', $data['resumeuri']);
+//            $request = $this->getYoutubeVideo($client, $path, $filename);
+////            $request->set
+//
+//            // Create a MediaFileUpload object for resumeable uploads.
+//            $media = new \Google_Http_MediaFileUpload(
+//                $client,
+//                null,
+//                'video/*',
+//                null,
+//                true,
+//                Upload::CHUNK_SIZE_BYTES
+//            );
+//            $media->setFileSize(filesize($path));
+//            $media->resume($data['resumeuri']);
+//            $this->uploadChunks($path, $media, $media->getProgress());
+//
+//            // If you want to make other calls after the file upload, set setDefer back to false
+//            $client->setDefer(false);
+//            $this->qm->moveFile($path, 'done');
+//            Logger::Log(" gelukt!\n");
+//        } catch (\Google_Service_Exception $e) {
+//            Logger::Log(sprintf("\nA service error occurred: %s\n", $e->getMessage()));
+//            $this->qm->moveFile($path, 'failed');
+//        } catch (\Google_Exception $e) {
+//            Logger::Log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
+//            $this->qm->moveFile($path, 'failed');
+//        } catch (\Exception $e) {
+//            Logger::Log(sprintf("\nAn client error occurred: %s\n", $e->getMessage()));
+//            $this->qm->moveFile($path, 'failed');
+//        }
     }
 
     private function upload($path)
@@ -216,22 +227,8 @@ class Upload
 
     private function createYoutubeVideo($client, $path)
     {
-        // Get filename
-        $parts = explode('/', $path);
-        $filename = array_pop($parts);
-
         $youtube = new \Google_Service_YouTube($client);
-        $mtime = filemtime($path);
-        $snippet = new \Google_Service_YouTube_VideoSnippet();
-
-        // Set it as title
-        $snippet->setTitle(
-            sprintf('%s, (%s)',
-                $filename,
-                date('d-m-Y H:i:s', $mtime))
-        );
-        $snippet->setDescription('');
-        $snippet->setCategoryId('22');
+        $snippet = $this->createSnippet($path);
 
         // Set video to private
         $status = new \Google_Service_YouTube_VideoStatus();
@@ -247,20 +244,39 @@ class Upload
         return $insertRequest;
     }
 
-    private function getYoutubeVideo($client, $filename)
+    private function createSnippet($path)
+    {
+        $mtime = filemtime($path);
+        // Get filename
+        $parts = explode('/', $path);
+        $filename = array_pop($parts);
+        $snippet = new \Google_Service_YouTube_VideoSnippet();
+
+        // Set it as title
+        $snippet->setTitle(
+            sprintf('%s, (%s)',
+                $filename,
+                date('d-m-Y H:i:s', $mtime))
+        );
+        $snippet->setDescription('');
+        $snippet->setCategoryId('22');
+        return $snippet;
+    }
+
+    private function getYoutubeVideo($client, $path, $filename)
     {
         $youtube = new \Google_Service_YouTube($client);
         $yt = new Youtube($this->provider);
         $videos = $yt->getVideos(true);
-        foreach($videos as $video) {
-            if(strpos($video['snippet']['title'], $filename) === 0) {
+        foreach ($videos as $video) {
+            if (strpos($video['snippet']['title'], $filename) === 0) {
                 $id = $video['snippet']['resourceId']['videoId'];
                 $video['snippet']['description'] = "Resumed at " . date('c');
 
 
                 // Attach metadata to video
                 $updated = new \Google_Service_YouTube_Video();
-                $updated->setSnippet($video['snippet']);
+                $updated->setSnippet($this->createSnippet($path));
                 $updated->setId($id);
 
                 $updateRequest = $youtube->videos->update("snippet", $updated);
@@ -269,6 +285,11 @@ class Upload
         }
 
         return false;
+    }
+
+    private function doCurl($url, $method, $params)
+    {
+
     }
 
 }
