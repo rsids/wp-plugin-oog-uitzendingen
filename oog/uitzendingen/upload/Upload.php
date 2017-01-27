@@ -4,6 +4,7 @@ namespace oog\uitzendingen\upload;
 use GuzzleHttp\Psr7\Request;
 use oog\uitzendingen\db\sqlite\DB;
 use oog\uitzendingen\providers\JsonGoogleClientProvider;
+use oog\uitzendingen\Youtube;
 
 class Upload
 {
@@ -89,15 +90,17 @@ class Upload
             return;
         }
 
-        $client = Auth::GetGoogleClient();
-
+        $client = $this->provider->getGoogleClient();
+//        $id = $this->getYoutubeVideo($filename);
+//        var_dump($id);
+//exit;
         try {
             // Get filename
             Logger::Log("\nVideo $path upload hervatten");
             $client->setDefer(true);
 
 //            $request = new Request('PUT', $data['resumeuri']);
-            $request = $this->createYoutubeVideo($client, $path);
+            $request = $this->getYoutubeVideo($client, $filename);
 //            $request->set
 
             // Create a MediaFileUpload object for resumeable uploads.
@@ -242,6 +245,30 @@ class Upload
         // Create a request for the API's videos.insert method to create and upload the video.
         $insertRequest = $youtube->videos->insert("status,snippet", $video);
         return $insertRequest;
+    }
+
+    private function getYoutubeVideo($client, $filename)
+    {
+        $youtube = new \Google_Service_YouTube($client);
+        $yt = new Youtube($this->provider);
+        $videos = $yt->getVideos(true);
+        foreach($videos as $video) {
+            if(strpos($video['snippet']['title'], $filename) === 0) {
+                $id = $video['snippet']['resourceId']['videoId'];
+                $video['snippet']['description'] = "Resumed at " . date('c');
+
+
+                // Attach metadata to video
+                $updated = new \Google_Service_YouTube_Video();
+                $updated->setSnippet($video['snippet']);
+                $updated->setId($id);
+
+                $updateRequest = $youtube->videos->update("snippet", $updated);
+                return $updateRequest;
+            }
+        }
+
+        return false;
     }
 
 }

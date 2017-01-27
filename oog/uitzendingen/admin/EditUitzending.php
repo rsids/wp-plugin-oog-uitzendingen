@@ -9,9 +9,13 @@ use oog\uitzendingen\Youtube;
 
 class EditUitzending
 {
-    public function __construct()
+
+    private $provider;
+
+    public function __construct($provider)
     {
-        if (!defined('OOG_UITZENDINGEN_CLI_MODE')) {
+        $this->provider = $provider;
+        if (!defined('OOG_UITZENDINGEN_CLI_MODE') && function_exists('add_filter') && function_exists('add_action')) {
             add_filter('acf/load_field/name=youtube_video', [$this, 'loadPrivateYoutubeVideos'], 10);
             add_filter('acf/load_field/name=youtube_category', [$this, 'loadYoutubeCategories'], 10);
             add_filter('acf/prepare_field/name=youtube_video', [$this, 'prepareYTVideo'], 10);
@@ -85,9 +89,19 @@ class EditUitzending
 
     public function loadPrivateYoutubeVideos($field)
     {
-        $youtube = new Youtube();
+        $youtube = new Youtube($this->provider);
+        $videos = $youtube->getVideos(true);
+        $choices = [];
+        foreach ($videos as $playlistItem) {
+            if ($playlistItem['status']['privacyStatus'] === 'private') {
+                $choices[$playlistItem['snippet']['resourceId']['videoId']] = sprintf(
+                    '%s (%s)',
+                    $playlistItem['snippet']['title'],
+                    $playlistItem['snippet']['resourceId']['videoId']);
+            }
+        }
         $field['choices'] = [0 => '-- Kies een Youtube Video --'];
-        $field['choices'] = array_merge($field['choices'], $youtube->getVideos(true));
+        $field['choices'] = array_merge($field['choices'], $choices);
 
         return $field;
     }
@@ -137,7 +151,7 @@ class EditUitzending
                         $tags);
 
                 }
-                $youtube = new Youtube();
+                $youtube = new Youtube($this->provider);
                 $youtube->updateVideo($meta['youtube_video'], $meta);
             }
         }

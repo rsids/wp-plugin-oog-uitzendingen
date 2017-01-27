@@ -120,15 +120,17 @@ class Youtube
                     'playlistId' => $uploadsListId,
                     'maxResults' => 50
                 ]);
-                foreach ($playlistItemsResponse['items'] as $playlistItem) {
+
+                $result = array_merge($result, $playlistItemsResponse['items']);
+
+                /*foreach ($playlistItemsResponse['items'] as $playlistItem) {
                     if (!$private || $playlistItem['status']['privacyStatus'] === 'private') {
                         $result[$playlistItem['snippet']['resourceId']['videoId']] = sprintf(
-                            '%s (%s, %s)',
+                            '%s (%s)',
                             $playlistItem['snippet']['title'],
-                            strftime('%x %T', strtotime($playlistItem['snippet']['publishedAt'])),
                             $playlistItem['snippet']['resourceId']['videoId']);
                     }
-                }
+                }*/
             }
 
         } catch (\Google_Service_Exception $e) {
@@ -140,4 +142,13 @@ class Youtube
 
         return $result;
     }
+
+//    public function getVideo($id)
+//    {
+//        $client = $this->provider->getGoogleClient();
+//        $youtube = new \Google_Service_YouTube($client);
+//        setlocale(LC_TIME, ['nl_NL', 'nl_NL.utf8']);
+//        $youtube->videos->call()
+//
+//    }
 }

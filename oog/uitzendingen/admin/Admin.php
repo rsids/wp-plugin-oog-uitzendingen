@@ -21,7 +21,7 @@ class Admin
 
     public function addActionsAndHooks()
     {
-        if (!defined('OOG_UITZENDINGEN_CLI_MODE')) {
+        if (!defined('OOG_UITZENDINGEN_CLI_MODE') && function_exists('add_action')) {
             add_action('admin_menu', [$this, 'addMenu']);
             add_action('admin_post_' . Uitzending::ACTION_STORE_CODE, [$this, 'storeGoogleCode'], 10);
             add_action('admin_post_' . Uitzending::ACTION_DISCONNECT, [$this, 'disconnectGoogle'], 10);
@@ -29,7 +29,7 @@ class Admin
             add_action('admin_notices', [$this, 'adminNotices']);
         }
 
-        $this->edit = new EditUitzending();
+        $this->edit = new EditUitzending($this->provider);
     }
 
     /**

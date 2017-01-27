@@ -51,19 +51,20 @@ class JsonGoogleClientProvider extends AbstractGoogleClientProvider
     {
         if (file_exists($this->credentials)) {
             $json = file_get_contents($this->credentials);
-            return (array)json_decode($json);
+            return json_decode($json, true);
         }
         return false;
     }
 
     protected function setAccessToken($token)
     {
+        file_put_contents($this->credentials, json_encode($token));
     }
 
     protected function getConfig()
     {
         $json = file_get_contents($this->clientSecret);
-        return json_decode($json);
+        return json_decode($json, true);
     }
 
     public function setCredentialsJson($file)
@@ -95,7 +96,7 @@ class JsonGoogleClientProvider extends AbstractGoogleClientProvider
             Logger::Log("Code opgeslagen: $line\n");
             $result = $client->authenticate($line);
             if (array_key_exists('access_token', $result)) {
-                file_put_contents($this->credentials, json_encode($result));
+                $this->setAccessToken($result);
             } else {
                 Logger::Log("Fout bij authenticatie, foutmelding: " . $result['error_description'] . "\n");
                 exit;
