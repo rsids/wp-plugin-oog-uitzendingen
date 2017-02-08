@@ -20,6 +20,10 @@ class Admin
             add_action('admin_post_' . Uitzending::ACTION_DISCONNECT, [$this, 'disconnectGoogle'], 10);
             add_action('admin_post_' . Uitzending::ACTION_GET_CATEGORIES, [$this, 'getCategories'], 10);
             add_action('admin_notices', [$this, 'adminNotices']);
+
+            add_filter('posts_where', [$this, 'search'], 10, 2);
+            add_filter('posts_join', [$this, 'searchJoin']);
+            add_filter('posts_distinct', [$this, 'searchDistinct']);
         }
 
         $this->edit = new EditUitzending();
@@ -134,6 +138,56 @@ OOG;
         register_setting('oog-uitzendingen', 'oog-uitzendingen-origins');
     }
 
+    public function search($where, $query)
+    {
+        global $pagenow, $wpdb;
+        //
+
+        if (!is_admin()) {
+            return $where;
+        }
+
+        if (is_search()) {
+            if($query->query_vars['post_type'] === Uitzending::POST_TYPE_TV) {
+                $where = preg_replace(
+                    "/\(\s*" . $wpdb->posts . ".post_title\s+LIKE\s*(\'[^\']+\')\s*\)/",
+                    "(" . $wpdb->posts . ".post_title LIKE $1) OR (" . $wpdb->postmeta . ".meta_value LIKE $1)", $where);
+            }
+        }
+
+        return $where;
+    }
+
+    public function searchDistinct($where)
+    {
+        global $wpdb;
+
+        if (!is_admin()) {
+            return $where;
+        }
+
+        if (is_search()) {
+            return "DISTINCT";
+        }
+
+        return $where;
+    }
+
+    public function searchJoin($join)
+    {
+        global $wpdb;
+
+        if (!is_admin()) {
+            return $join;
+        }
+
+        if (is_search()) {
+            $join .= ' LEFT JOIN ' . $wpdb->postmeta . ' ON ' . $wpdb->posts . '.ID = ' . $wpdb->postmeta . '.post_id ';
+        }
+
+        return $join;
+    }
+
     /**
      * @param bool $setToken
      * @return \Google_Client
@@ -168,7 +222,7 @@ OOG;
                 if (array_key_exists('access_token', $token)) {
                     update_option('oog-uitzending-access_token', json_encode($token));
                     update_option('oog-uitzending-id_token', $token['id_token']);
-                }else {
+                } else {
                     error_log('Missing key "access_token" while updating authentication, response was: ' . var_export($token, true));
                 }
             }
